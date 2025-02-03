@@ -14,13 +14,17 @@ public class BuilderTool : MonoBehaviour
 
     private bool InDeleteMode = false;
 
-    private Camera camera;
+    private Camera cam;
 
-    [SerializeField] private GameObject gameObjectToBuild;
+    [SerializeField] private Building buildingToSpawn;
+    private Building targetBuilding;
+
+    [SerializeField] private Material negativeMaterial;
+    [SerializeField] private Material positiveMaterial;
 
     private void Start()
     {
-        camera = Camera.main;
+        cam = Camera.main;
     }
 
     private void Update()
@@ -45,41 +49,85 @@ public class BuilderTool : MonoBehaviour
 
     private bool IsRayHittingSomething(LayerMask layerHitting, out RaycastHit hitInfo)
     {
-        var ray = new Ray(rayOrigin.position, camera.transform.forward * rayDistance);
+        var ray = new Ray(rayOrigin.position, cam.transform.forward * rayDistance);
 
         return Physics.Raycast(ray, out hitInfo, rayDistance, layerHitting);
     }
 
     private void BuildMode()
     {
-        if (gameObjectToBuild == null)
+        if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+        {
+            targetBuilding.NotReadyForDelete();
+        }
+
+        if (buildingToSpawn == null)
             return;
 
         if (!IsRayHittingSomething(buildingLayermask, out RaycastHit hitInfo))
-            return;
-
-        gameObjectToBuild.transform.position = hitInfo.point;
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            Instantiate(gameObjectToBuild, hitInfo.point, Quaternion.identity);
+            buildingToSpawn.ChangeMaterial(negativeMaterial);
         }
+        else
+        {
+            buildingToSpawn.ChangeMaterial(positiveMaterial);
+            var positionToSpawn = GridPosition.GridPositionFronWorldPoint(hitInfo.point, 1);
+            buildingToSpawn.transform.position = positionToSpawn;
+
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                Building building = Instantiate(buildingToSpawn, positionToSpawn, Quaternion.identity);
+                building.ResetMaterial();
+            }
+        }
+
     }
 
     private void DeleteMode()
     {
-        if (!IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
-            return;
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
         {
-            Destroy(hitInfo.collider.gameObject);
+            var detectedBuilding = hitInfo.collider.gameObject.GetComponentInParent<Building>();
+
+            if (detectedBuilding == null)
+                return;
+
+            if(targetBuilding == null)
+            {
+                targetBuilding = detectedBuilding;
+            }
+
+            if(detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
+            {
+                targetBuilding.NotReadyForDelete();
+                targetBuilding = detectedBuilding;
+            }
+
+            if (detectedBuilding == targetBuilding && !targetBuilding.IsFlaggedForDelete)
+            {
+                targetBuilding.ReadyForDelete(negativeMaterial);
+            }
+
+            if (Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                Destroy(hitInfo.collider.gameObject);
+                targetBuilding = null;
+            }
         }
+        else
+        {
+            if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+            {
+                targetBuilding.NotReadyForDelete();
+                targetBuilding = null;
+            }
+        }
+        
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawRay(rayOrigin.position, rayDistance * Vector3.forward);
+        Gizmos.DrawLine(rayOrigin.position, rayOrigin.position + (Vector3.forward * rayDistance)) ;
     }
 }
