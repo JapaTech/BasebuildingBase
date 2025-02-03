@@ -1,5 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,20 +17,53 @@ public class BuilderTool : MonoBehaviour
 
     [SerializeField] private Building buildingToSpawn;
     private Building targetBuilding;
-
+    [SerializeField] private int gridSpacing = 1;
+    [SerializeField] private float rotationAmount = 90f;
+    private Quaternion lastRotation;
+   
     [SerializeField] private Material negativeMaterial;
     [SerializeField] private Material positiveMaterial;
+
+    Transform trBuilding;
+
+    private Action<Vector3> placeAction;
+    private Action<Building> deleteAction;
+    private Action rotationAction;
+
 
     private void Start()
     {
         cam = Camera.main;
+
+        trBuilding = buildingToSpawn.transform;
+        lastRotation = buildingToSpawn.transform.rotation;
     }
 
     private void Update()
     {
-        if (Keyboard.current.qKey.wasPressedThisFrame)
+        if (Keyboard.current.fKey.wasPressedThisFrame)
         {
             InDeleteMode = !InDeleteMode;
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame && !InDeleteMode)
+        {
+            placeAction = PlaceBuilding;
+        }
+
+        if (Mouse.current.leftButton.wasPressedThisFrame && InDeleteMode)
+        {
+            deleteAction = DeleteBuilding;
+        }
+
+        if (Keyboard.current.eKey.wasPressedThisFrame &&!InDeleteMode)
+        {
+            rotationAction = RotateCounterClockwise;
+        }
+
+        if (Keyboard.current.qKey.wasReleasedThisFrame && !InDeleteMode)
+        {
+            rotationAction = RotateClockwise;
         }
     }
 
@@ -72,19 +104,21 @@ public class BuilderTool : MonoBehaviour
         {
             buildingToSpawn.ChangeMaterial(positiveMaterial);
             var positionToSpawn = GridPosition.GridPositionFronWorldPoint(hitInfo.point, 1);
-            buildingToSpawn.transform.position = positionToSpawn;
+            trBuilding.position = positionToSpawn;
 
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                Building building = Instantiate(buildingToSpawn, positionToSpawn, Quaternion.identity);
-                building.ResetMaterial();
-            }
+            rotationAction?.Invoke();
+            rotationAction = null;
+
+            placeAction?.Invoke(positionToSpawn);
+            placeAction = null;
         }
 
     }
 
     private void DeleteMode()
     {
+        //buildingToSpawn = null;
+
         if (IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
         {
             var detectedBuilding = hitInfo.collider.gameObject.GetComponentInParent<Building>();
@@ -92,12 +126,12 @@ public class BuilderTool : MonoBehaviour
             if (detectedBuilding == null)
                 return;
 
-            if(targetBuilding == null)
+            if (targetBuilding == null)
             {
                 targetBuilding = detectedBuilding;
             }
 
-            if(detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
+            if (detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
             {
                 targetBuilding.NotReadyForDelete();
                 targetBuilding = detectedBuilding;
@@ -108,23 +142,47 @@ public class BuilderTool : MonoBehaviour
                 targetBuilding.ReadyForDelete(negativeMaterial);
             }
 
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-            {
-                Destroy(hitInfo.collider.gameObject);
-                targetBuilding = null;
-            }
+            deleteAction?.Invoke(detectedBuilding);
+            deleteAction = null;
         }
         else
         {
-            if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+            if (targetBuilding != null && targetBuilding.IsFlaggedForDelete)
             {
                 targetBuilding.NotReadyForDelete();
                 targetBuilding = null;
             }
         }
-        
+
     }
 
+
+
+    private void PlaceBuilding(Vector3 positionToSpawn)
+    {
+        Building building = Instantiate(buildingToSpawn, positionToSpawn, lastRotation);
+        building.ResetMaterial();
+    }
+
+    private void DeleteBuilding(Building buildingToDelete)
+    {
+        Destroy(buildingToDelete.gameObject);
+        targetBuilding = null;
+    }
+
+    private void RotateClockwise()
+    {
+        trBuilding.Rotate(xAngle: 0, rotationAmount, zAngle: 0);
+        lastRotation = trBuilding.rotation;
+    }
+
+    private void RotateCounterClockwise()
+    {
+        trBuilding.Rotate(xAngle: 0, -rotationAmount, zAngle: 0);
+        lastRotation = trBuilding.rotation;
+    }
+
+    
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.yellow;

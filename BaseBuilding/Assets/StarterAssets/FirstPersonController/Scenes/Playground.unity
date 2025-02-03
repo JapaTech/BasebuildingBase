@@ -575,6 +575,8 @@ MonoBehaviour:
   rayDistance: 12
   rayOrigin: {fileID: 311469728}
   buildingToSpawn: {fileID: 1668241537}
+  gridSpacing: 1
+  rotationAmount: 90
   negativeMaterial: {fileID: 2100000, guid: 2ec157f793a4e4e48b96144e60e624c7, type: 2}
   positiveMaterial: {fileID: 2100000, guid: 05a8bb1b1bc1d054caaeac523af4a704, type: 2}
 --- !u!1 &743154249
@@ -1407,8 +1409,8 @@ Transform:
   m_GameObject: {fileID: 1668241536}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.45, y: 0.6, z: 2.64}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 2, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1772573589}
