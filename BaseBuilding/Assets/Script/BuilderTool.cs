@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -30,7 +31,20 @@ public class BuilderTool : MonoBehaviour
     private Action<Building> deleteAction;
     private Action rotationAction;
 
+    public static Action<bool> changeMode;
+
     [SerializeField] private Building_SO testAsset;
+    private Building_SO lastAssetData;
+
+    private void OnEnable()
+    {
+        BuilderUI.newBuilding += CreatePreview;
+    }
+
+    private void OnDisable()
+    {
+        BuilderUI.newBuilding -= CreatePreview;
+    }
 
     private void Start()
     {
@@ -49,6 +63,7 @@ public class BuilderTool : MonoBehaviour
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
             inDeleteMode = !inDeleteMode;
+            changeMode?.Invoke(inDeleteMode);
         }
 
         if (Mouse.current.leftButton.wasPressedThisFrame && !inDeleteMode)
@@ -119,6 +134,8 @@ public class BuilderTool : MonoBehaviour
         buildingToSpawn.Init(buildingData);
         trBuilding = buildingToSpawn.transform;
         trBuilding.rotation = lastRotation;
+
+        lastAssetData = buildingData;
     }
 
     private void BuildMode()
@@ -129,13 +146,7 @@ public class BuilderTool : MonoBehaviour
             targetBuilding = null;
         }
 
-        if (buildingToSpawn == null)
-            return;
-
-
-        buildingToSpawn.ChangeMaterial(buildingToSpawn.IsOverlapping ? negativeMaterial : positiveMaterial);
-        
-
+        buildingToSpawn.ChangeMaterial(buildingToSpawn.IsOverlapping ? negativeMaterial : positiveMaterial);        
 
         if (IsRayHittingSomething(buildingLayermask, out RaycastHit hitInfo))
         {
@@ -161,38 +172,40 @@ public class BuilderTool : MonoBehaviour
             buildingToSpawn = null;
         }
 
-        if (IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
-        {
-            var detectedBuilding = hitInfo.collider.gameObject.GetComponent<Building>();
-            var detectedObject = hitInfo.collider.gameObject.GetComponent<GameObject>();
-            Debug.Log(detectedBuilding);
-            Debug.Log(detectedObject);
 
-            if (detectedBuilding == null)
+        if(IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
+        {
+            var detectedObje = hitInfo.collider.gameObject;
+            //Debug.Log(detectedObje);
+
+            var detectedBuilding = hitInfo.collider.gameObject.GetComponentInParent<Building>();
+            Debug.Log(detectedBuilding);
+
+            if(detectedBuilding == null)
                 return;
 
-            if (targetBuilding == null)
+            if(targetBuilding == null)
             {
                 targetBuilding = detectedBuilding;
             }
-
-            if (detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
+            
+            if(detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
             {
                 targetBuilding.NotReadyForDelete();
                 targetBuilding = detectedBuilding;
             }
 
-            if (detectedBuilding == targetBuilding && !targetBuilding.IsFlaggedForDelete)
+            if (targetBuilding == detectedBuilding && !targetBuilding.IsFlaggedForDelete) 
             {
                 targetBuilding.ReadyForDelete(negativeMaterial);
             }
 
-            deleteAction?.Invoke(detectedBuilding);
+            deleteAction?.Invoke(targetBuilding);
             deleteAction = null;
         }
         else
         {
-            if (targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+            if (targetBuilding != null)
             {
                 targetBuilding.NotReadyForDelete();
                 targetBuilding = null;
@@ -201,14 +214,20 @@ public class BuilderTool : MonoBehaviour
 
     }
 
-
     private void PlaceBuilding(Vector3 positionToSpawn)
     {
         buildingToSpawn.PlaceBuilding();
         trBuilding.position = positionToSpawn;
         lastRotation = trBuilding.rotation;
         buildingToSpawn = null;
-        CreatePreview(testAsset);
+        if(lastAssetData != null)
+        {
+            CreatePreview(lastAssetData);
+        }
+        else
+        {
+            Debug.Log("O último asset não carregou");
+        }
     }
 
     private void DeleteBuilding(Building buildingToDelete)
@@ -228,7 +247,6 @@ public class BuilderTool : MonoBehaviour
         trBuilding.Rotate(xAngle: 0, -rotationAmount, zAngle: 0);
         lastRotation = trBuilding.rotation;
     }
-
     
     private void OnDrawGizmos()
     {
