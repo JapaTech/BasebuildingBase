@@ -1,19 +1,57 @@
+using Unity.VisualScripting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem.LowLevel;
 
+[RequireComponent(typeof(BoxCollider))]
 public class Building : MonoBehaviour
 {
     private Renderer r;
-    [SerializeField] private Material defaultMaterial;
+    private Material defaultMaterial;
     public bool IsFlaggedForDelete { get; private set; }
+    private Building_SO buildingData;
 
-    private void Start()
+    private BoxCollider boxCollider;
+    private GameObject buildingPrefab;
+
+    private Transform colliders;
+    public bool IsOverlapping { get; private set; }
+
+    public void Init(Building_SO data)
     {
-        r = GetComponentInChildren<Renderer>();
-        
-        if(r == null)
+        buildingData = data;
+
+        boxCollider = GetComponent<BoxCollider>();
+        boxCollider.size = buildingData.Size;
+        boxCollider.center = new Vector3(0, (buildingData.Size.y + 0.2f) * 0.5f, 0);
+        boxCollider.isTrigger = true;
+
+        var rb = gameObject.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+
+        buildingPrefab = Instantiate(buildingData.Prefab, transform);
+        r = buildingPrefab.GetComponentInChildren<Renderer>();
+        defaultMaterial = r.material;
+
+        colliders = buildingPrefab.transform.Find("Colliders");
+
+        if (colliders != null)
         {
-            Debug.Log("Sem render");
+            colliders.gameObject.SetActive(false);
         }
+    }
+
+    public void PlaceBuilding()
+    {
+        boxCollider.enabled = false;
+        if (colliders != null)
+        {
+            colliders.gameObject.SetActive(true);
+        }
+        ChangeMaterial(defaultMaterial);
+        gameObject.layer = 8;
+        gameObject.name = buildingData.BuildingName;
+        Debug.Log("Colocou de novo");
     }
 
     public void ChangeMaterial(Material newMaterial)
@@ -22,11 +60,6 @@ public class Building : MonoBehaviour
         {
             r.material = newMaterial;
         }
-    }
-
-    public void ResetMaterial()
-    {
-        GetComponentInChildren<Renderer>().material = defaultMaterial;
     }
 
     public void ReadyForDelete(Material negativeMaterial)
@@ -38,6 +71,19 @@ public class Building : MonoBehaviour
     public void NotReadyForDelete()
     {
         IsFlaggedForDelete = false;
-        ResetMaterial();
+        ChangeMaterial(defaultMaterial);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.gameObject.layer != 7)
+        {
+            IsOverlapping = true;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        IsOverlapping = false;
     }
 }

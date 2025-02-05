@@ -4,14 +4,14 @@ using UnityEngine.InputSystem;
 
 public class BuilderTool : MonoBehaviour
 {
-    [SerializeField] private int defaultLayer = 8;
+    [SerializeField] private int previewLayer = 9;
     [SerializeField] private LayerMask buildingLayermask;
     [SerializeField] private LayerMask deleteBuildingLayermask;
     
     [SerializeField] private float rayDistance;
     [SerializeField] private Transform rayOrigin;
 
-    private bool InDeleteMode = false;
+    private bool inDeleteMode = false;
 
     private Camera cam;
 
@@ -30,38 +30,43 @@ public class BuilderTool : MonoBehaviour
     private Action<Building> deleteAction;
     private Action rotationAction;
 
+    [SerializeField] private Building_SO testAsset;
 
     private void Start()
     {
         cam = Camera.main;
 
-        trBuilding = buildingToSpawn.transform;
-        lastRotation = buildingToSpawn.transform.rotation;
+        CreatePreview(testAsset);
+        if(buildingToSpawn != null)
+        {
+            trBuilding = buildingToSpawn.transform;
+        }
+        lastRotation = Quaternion.identity;
     }
 
     private void Update()
     {
         if (Keyboard.current.fKey.wasPressedThisFrame)
         {
-            InDeleteMode = !InDeleteMode;
+            inDeleteMode = !inDeleteMode;
         }
 
-        if (Mouse.current.leftButton.wasPressedThisFrame && !InDeleteMode)
+        if (Mouse.current.leftButton.wasPressedThisFrame && !inDeleteMode)
         {
             placeAction = PlaceBuilding;
         }
 
-        if (Mouse.current.leftButton.wasPressedThisFrame && InDeleteMode)
+        if (Mouse.current.leftButton.wasPressedThisFrame && inDeleteMode)
         {
             deleteAction = DeleteBuilding;
         }
 
-        if (Keyboard.current.eKey.wasPressedThisFrame &&!InDeleteMode)
+        if (Keyboard.current.eKey.wasPressedThisFrame &&!inDeleteMode)
         {
             rotationAction = RotateCounterClockwise;
         }
 
-        if (Keyboard.current.qKey.wasReleasedThisFrame && !InDeleteMode)
+        if (Keyboard.current.qKey.wasReleasedThisFrame && !inDeleteMode)
         {
             rotationAction = RotateClockwise;
         }
@@ -69,7 +74,7 @@ public class BuilderTool : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (InDeleteMode)
+        if (inDeleteMode)
         {
             DeleteMode();
         }
@@ -86,42 +91,82 @@ public class BuilderTool : MonoBehaviour
         return Physics.Raycast(ray, out hitInfo, rayDistance, layerHitting);
     }
 
+    private void CreatePreview(Building_SO buildingData)
+    {
+        if (inDeleteMode) 
+        {
+            if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+            {
+                targetBuilding.NotReadyForDelete();
+            }
+            targetBuilding = null;
+            inDeleteMode = false;
+        }
+
+        if(buildingToSpawn != null)
+        {
+            Destroy(buildingToSpawn.gameObject);
+            buildingToSpawn = null;
+        }
+
+        var newBuilding = new GameObject
+        {
+            layer = previewLayer,
+            name = buildingData.name + "Preview",
+        };
+
+        buildingToSpawn = newBuilding.AddComponent<Building>();
+        buildingToSpawn.Init(buildingData);
+        trBuilding = buildingToSpawn.transform;
+        trBuilding.rotation = lastRotation;
+    }
+
     private void BuildMode()
     {
         if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
         {
             targetBuilding.NotReadyForDelete();
+            targetBuilding = null;
         }
 
         if (buildingToSpawn == null)
             return;
 
-        if (!IsRayHittingSomething(buildingLayermask, out RaycastHit hitInfo))
+
+        buildingToSpawn.ChangeMaterial(buildingToSpawn.IsOverlapping ? negativeMaterial : positiveMaterial);
+        
+
+
+        if (IsRayHittingSomething(buildingLayermask, out RaycastHit hitInfo))
         {
-            buildingToSpawn.ChangeMaterial(negativeMaterial);
-        }
-        else
-        {
-            buildingToSpawn.ChangeMaterial(positiveMaterial);
-            var positionToSpawn = GridPosition.GridPositionFronWorldPoint(hitInfo.point, 1);
+            var positionToSpawn = GridPosition.GridPositionFronWorldPoint(hitInfo.point, gridSpacing);
             trBuilding.position = positionToSpawn;
 
             rotationAction?.Invoke();
             rotationAction = null;
 
-            placeAction?.Invoke(positionToSpawn);
-            placeAction = null;
+            if (!buildingToSpawn.IsOverlapping)
+            {
+                placeAction?.Invoke(positionToSpawn);
+                placeAction = null;
+            }
         }
-
     }
 
     private void DeleteMode()
     {
-        //buildingToSpawn = null;
+        if(buildingToSpawn != null)
+        {
+            Destroy(buildingToSpawn.gameObject);
+            buildingToSpawn = null;
+        }
 
         if (IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
         {
-            var detectedBuilding = hitInfo.collider.gameObject.GetComponentInParent<Building>();
+            var detectedBuilding = hitInfo.collider.gameObject.GetComponent<Building>();
+            var detectedObject = hitInfo.collider.gameObject.GetComponent<GameObject>();
+            Debug.Log(detectedBuilding);
+            Debug.Log(detectedObject);
 
             if (detectedBuilding == null)
                 return;
@@ -157,11 +202,13 @@ public class BuilderTool : MonoBehaviour
     }
 
 
-
     private void PlaceBuilding(Vector3 positionToSpawn)
     {
-        Building building = Instantiate(buildingToSpawn, positionToSpawn, lastRotation);
-        building.ResetMaterial();
+        buildingToSpawn.PlaceBuilding();
+        trBuilding.position = positionToSpawn;
+        lastRotation = trBuilding.rotation;
+        buildingToSpawn = null;
+        CreatePreview(testAsset);
     }
 
     private void DeleteBuilding(Building buildingToDelete)
@@ -185,7 +232,9 @@ public class BuilderTool : MonoBehaviour
     
     private void OnDrawGizmos()
     {
+        if (cam == null)
+            return;
         Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(rayOrigin.position, rayOrigin.position + (Vector3.forward * rayDistance)) ;
+        Gizmos.DrawLine(rayOrigin.position, rayOrigin.position + (cam.transform.forward * rayDistance)) ;
     }
 }
