@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7983c9c788c221949a316a9f50de4041, type: 3}
   m_Name: Sphere-Building
   m_EditorClassIdentifier: 
-  Name: TallBox
-  GridSize: 0
-  Size: {x: 0, y: 0, z: 0}
+  BuildingName: Sphere
+  GridSize: 1
+  Size: {x: 1, y: 1, z: 1}
   Prefab: {fileID: 0}
+  defautlMaterial: {fileID: 2100000, guid: 79f64ed6f5d6d374d91c3a0af4070258, type: 2}

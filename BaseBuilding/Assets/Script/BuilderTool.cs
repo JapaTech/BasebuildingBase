@@ -56,6 +56,7 @@ public class BuilderTool : MonoBehaviour
             trBuilding = buildingToSpawn.transform;
         }
         lastRotation = Quaternion.identity;
+        changeMode?.Invoke(inDeleteMode);
     }
 
     private void Update()

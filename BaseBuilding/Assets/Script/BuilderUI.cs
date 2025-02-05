@@ -40,9 +40,9 @@ public class BuilderUI : MonoBehaviour
         }
     }
 
-    private void ChangeStateText(bool building)
+    private void ChangeStateText(bool deleteMode)
     {
-        if (building)
+        if (!deleteMode)
         {
             text.text = "Building Mode";
         }
