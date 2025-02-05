@@ -157,7 +157,12 @@ public class BuilderTool : MonoBehaviour
             rotationAction?.Invoke();
             rotationAction = null;
 
-            if (!buildingToSpawn.IsOverlapping)
+            if (buildingToSpawn.IsOverlapping)
+            {
+                placeAction = null;
+                return;
+            }
+            else
             {
                 placeAction?.Invoke(positionToSpawn);
                 placeAction = null;

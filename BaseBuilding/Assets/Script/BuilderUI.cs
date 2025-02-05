@@ -34,7 +34,7 @@ public class BuilderUI : MonoBehaviour
             newBuilding?.Invoke(tallBoxData);
         }
 
-        if (Keyboard.current.digit1Key.wasPressedThisFrame)
+        if (Keyboard.current.digit3Key.wasPressedThisFrame)
         {
             newBuilding?.Invoke(sphereData);
         }
