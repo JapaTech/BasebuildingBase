@@ -43,7 +43,6 @@ GameObject:
   - component: {fileID: 4522111773855768838}
   - component: {fileID: 8861623668066952128}
   - component: {fileID: 4938088882663785707}
-  - component: {fileID: 6112335622539777188}
   m_Layer: 8
   m_Name: Sphere
   m_TagString: Untagged
@@ -116,27 +115,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &6112335622539777188
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1685149091287514253}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &5310518515547058039
 GameObject:
   m_ObjectHideFlags: 0
@@ -146,7 +124,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2869575479586527499}
-  - component: {fileID: 3676016475836808706}
+  - component: {fileID: 5326115136644026629}
   m_Layer: 8
   m_Name: Collider
   m_TagString: Untagged
@@ -169,8 +147,8 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1901692905916157694}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!135 &3676016475836808706
-SphereCollider:
+--- !u!65 &5326115136644026629
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -188,8 +166,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.49
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.9032384, y: 0.9643382, z: 0.91789645}
+  m_Center: {x: 0, y: -0.022912383, z: 0}
 --- !u!1 &5757627596683270086
 GameObject:
   m_ObjectHideFlags: 0
@@ -199,7 +177,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2153613066449153463}
-  - component: {fileID: 529297463303693047}
+  - component: {fileID: 6027674035309654269}
   m_Layer: 8
   m_Name: Sphere
   m_TagString: Untagged
@@ -224,8 +202,8 @@ Transform:
   - {fileID: 4522111773855768838}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!135 &529297463303693047
-SphereCollider:
+--- !u!65 &6027674035309654269
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -243,5 +221,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.46
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0.9185336, y: 0.9439918, z: 0.9083502}
+  m_Center: {x: 0, y: -0.02800411, z: 0}

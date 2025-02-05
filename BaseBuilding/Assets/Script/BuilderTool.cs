@@ -1,95 +1,71 @@
 using System;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class BuilderTool : MonoBehaviour
 {
-    [SerializeField] private int previewLayer = 9;
-    [SerializeField] private LayerMask buildingLayermask;
-    [SerializeField] private LayerMask deleteBuildingLayermask;
-    
-    [SerializeField] private float rayDistance;
-    [SerializeField] private Transform rayOrigin;
+    [SerializeField] private int previewLayer = 9; // Layer for preview objects
+    [SerializeField] private LayerMask buildingLayermask; // Layer mask for detecting where to build
+    [SerializeField] private LayerMask deleteBuildingLayermask; // Layer mask for detecting buildings to delete
 
-    private bool inDeleteMode = false;
+    [SerializeField] private float rayDistance; // Maximum distance for raycasting
+    [SerializeField] private Transform rayOrigin; // Origin point for raycasting
 
-    private Camera cam;
+    private bool inDeleteMode = false;  // Tracks whether the tool is in delete mode
 
-    [SerializeField] private Building buildingToSpawn;
-    private Building targetBuilding;
-    [SerializeField] private int gridSpacing = 1;
-    [SerializeField] private float rotationAmount = 90f;
-    private Quaternion lastRotation;
-   
-    [SerializeField] private Material negativeMaterial;
-    [SerializeField] private Material positiveMaterial;
+    private Camera cam; // Main camera reference
 
-    Transform trBuilding;
+    [SerializeField] private Building buildingToSpawn; // The building prefab to spawn
+    [SerializeField] private int gridSpacing = 1; // Grid spacing for snapping buildings
+    [SerializeField] private float rotationAmount = 90f; // Amount to rotate buildings
+    private Transform trBuilding; // Transform of the building being previewed
+    private Building buildingToDelete; // Reference to the building marked for deletion
+    private Quaternion lastRotation; // Stores the last rotation applied to the building
 
-    private Action<Vector3> placeAction;
-    private Action<Building> deleteAction;
-    private Action rotationAction;
+    public static Action<bool> changeMode; // Event to notify mode changes (build/delete)
 
-    public static Action<bool> changeMode;
+    [SerializeField] private Material negativeMaterial; // Material for invalid placement or delete
+    [SerializeField] private Material positiveMaterial; // Material for valid placement
 
-    [SerializeField] private Building_SO testAsset;
-    private Building_SO lastAssetData;
+    [SerializeField] private Building_SO testAsset; // Test building asset data for preview
+    private Building_SO lastAssetData; // Stores the last building asset data used
 
     private void OnEnable()
     {
-        BuilderUI.newBuilding += CreatePreview;
+        // Subscribe to the event for creating a new building preview
+        BuilderUI.buildingMode += CreatePreview;
     }
 
     private void OnDisable()
     {
-        BuilderUI.newBuilding -= CreatePreview;
+        // Unsubscribe from the event to avoid memory leaks
+        BuilderUI.buildingMode -= CreatePreview;
     }
 
     private void Start()
     {
-        cam = Camera.main;
+        cam = Camera.main; // Get the main camera
 
+        // Create a preview of the test building asset
         CreatePreview(testAsset);
-        if(buildingToSpawn != null)
+
+        // Initialize the building transform if a building is set
+
+        if (buildingToSpawn != null) 
         {
             trBuilding = buildingToSpawn.transform;
         }
+
+        // Initialize the last rotation
         lastRotation = Quaternion.identity;
+
+        // Notify listeners about the initial mode
         changeMode?.Invoke(inDeleteMode);
     }
 
     private void Update()
     {
-        if (Keyboard.current.fKey.wasPressedThisFrame)
-        {
-            inDeleteMode = !inDeleteMode;
-            changeMode?.Invoke(inDeleteMode);
-        }
-
-        if (Mouse.current.leftButton.wasPressedThisFrame && !inDeleteMode)
-        {
-            placeAction = PlaceBuilding;
-        }
-
-        if (Mouse.current.leftButton.wasPressedThisFrame && inDeleteMode)
-        {
-            deleteAction = DeleteBuilding;
-        }
-
-        if (Keyboard.current.eKey.wasPressedThisFrame &&!inDeleteMode)
-        {
-            rotationAction = RotateCounterClockwise;
-        }
-
-        if (Keyboard.current.qKey.wasReleasedThisFrame && !inDeleteMode)
-        {
-            rotationAction = RotateClockwise;
-        }
-    }
-
-    private void FixedUpdate()
-    {
+        // Toggle between build and delete modes based on the current mode
         if (inDeleteMode)
         {
             DeleteMode();
@@ -98,127 +74,155 @@ public class BuilderTool : MonoBehaviour
         {
             BuildMode();
         }
+
+        // Toggle delete mode when the 'F' key is pressed
+        if (Keyboard.current.fKey.wasPressedThisFrame)
+        {
+            inDeleteMode = !inDeleteMode;
+            changeMode?.Invoke(inDeleteMode);
+        }
     }
 
+    // Checks if the ray hits something on the specified layer
     private bool IsRayHittingSomething(LayerMask layerHitting, out RaycastHit hitInfo)
     {
         var ray = new Ray(rayOrigin.position, cam.transform.forward * rayDistance);
-
         return Physics.Raycast(ray, out hitInfo, rayDistance, layerHitting);
     }
 
+    // Creates a preview of the building based on the provided building data
     private void CreatePreview(Building_SO buildingData)
     {
+        // Exit delete mode, if active
         if (inDeleteMode) 
         {
-            if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+            if(buildingToDelete != null && buildingToDelete.IsFlaggedForDelete)
             {
-                targetBuilding.NotReadyForDelete();
+                buildingToDelete.NotReadyForDelete();
             }
-            targetBuilding = null;
+            buildingToDelete = null;
             inDeleteMode = false;
         }
 
-        if(buildingToSpawn != null)
+        // Destroy the existing preview building if it exists
+        if (buildingToSpawn != null)
         {
             Destroy(buildingToSpawn.gameObject);
             buildingToSpawn = null;
         }
 
+        // Create a new preview building object
         var newBuilding = new GameObject
         {
             layer = previewLayer,
             name = buildingData.name + "Preview",
         };
 
+        // Add the Building component and initialize it with the building data
         buildingToSpawn = newBuilding.AddComponent<Building>();
         buildingToSpawn.Init(buildingData);
         trBuilding = buildingToSpawn.transform;
         trBuilding.rotation = lastRotation;
 
+        // Store the last building asset data
         lastAssetData = buildingData;
     }
 
+    // Handles the building placement logic
     private void BuildMode()
     {
-        if(targetBuilding != null && targetBuilding.IsFlaggedForDelete)
+        // Reset the delete mode state if a building is flagged for deletion
+        if (buildingToDelete != null && buildingToDelete.IsFlaggedForDelete)
         {
-            targetBuilding.NotReadyForDelete();
-            targetBuilding = null;
+            buildingToDelete.NotReadyForDelete();
+            buildingToDelete = null;
         }
 
-        buildingToSpawn.ChangeMaterial(buildingToSpawn.IsOverlapping ? negativeMaterial : positiveMaterial);        
+        // Change the building material based on whether it's overlapping
+        buildingToSpawn.ChangeMaterial(buildingToSpawn.IsOverlapping ? negativeMaterial : positiveMaterial);
 
+        // Check if the ray hits a valid spot for building
         if (IsRayHittingSomething(buildingLayermask, out RaycastHit hitInfo))
         {
+            // Snap the building position to the grid
             var positionToSpawn = GridPosition.GridPositionFronWorldPoint(hitInfo.point, gridSpacing);
             trBuilding.position = positionToSpawn;
 
-            rotationAction?.Invoke();
-            rotationAction = null;
-
-            if (buildingToSpawn.IsOverlapping)
+            // Rotate the building counterclockwise when 'E' is pressed
+            if (Keyboard.current.eKey.wasPressedThisFrame && !inDeleteMode)
             {
-                placeAction = null;
-                return;
+                RotateCounterClockwise();
             }
-            else
+
+            // Rotate the building clockwise when 'Q' is released
+            if (Keyboard.current.qKey.wasReleasedThisFrame && !inDeleteMode)
             {
-                placeAction?.Invoke(positionToSpawn);
-                placeAction = null;
+                RotateClockwise();
+            }
+
+            // Place the building if it's not overlapping and the left mouse button is pressed
+            if (!buildingToSpawn.IsOverlapping && Mouse.current.leftButton.wasPressedThisFrame && !inDeleteMode)
+            {
+                PlaceBuilding(positionToSpawn);
             }
         }
     }
 
+    // Handles the building deletion logic
     private void DeleteMode()
     {
-        if(buildingToSpawn != null)
+        // Destroy the preview building if it exists
+        if (buildingToSpawn != null)
         {
             Destroy(buildingToSpawn.gameObject);
             buildingToSpawn = null;
         }
 
-
-        if(IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
+        // Check if the ray hits a building that can be deleted
+        if (IsRayHittingSomething(deleteBuildingLayermask, out RaycastHit hitInfo))
         {
-            var detectedObje = hitInfo.collider.gameObject;
-            //Debug.Log(detectedObje);
-
+            // Get the building component from the hit object
             var detectedBuilding = hitInfo.collider.gameObject.GetComponentInParent<Building>();
             Debug.Log(detectedBuilding);
 
             if(detectedBuilding == null)
                 return;
 
-            if(targetBuilding == null)
+            // Mark the building for deletion
+            if (buildingToDelete == null)
             {
-                targetBuilding = detectedBuilding;
-            }
-            
-            if(detectedBuilding != targetBuilding && targetBuilding.IsFlaggedForDelete)
-            {
-                targetBuilding.NotReadyForDelete();
-                targetBuilding = detectedBuilding;
+                buildingToDelete = detectedBuilding;
             }
 
-            if (targetBuilding == detectedBuilding && !targetBuilding.IsFlaggedForDelete) 
+            // Create a preview of the test building asset
+            if (detectedBuilding != buildingToDelete && buildingToDelete.IsFlaggedForDelete)
             {
-                targetBuilding.ReadyForDelete(negativeMaterial);
+                buildingToDelete.NotReadyForDelete();
+                buildingToDelete = detectedBuilding;
             }
 
-            deleteAction?.Invoke(targetBuilding);
-            deleteAction = null;
+            // Highlight the building for deletion
+            if (buildingToDelete == detectedBuilding && !buildingToDelete.IsFlaggedForDelete) 
+            {
+                buildingToDelete.ReadyForDelete(negativeMaterial);
+            }
+
+            // Delete the building when the left mouse button is pressed
+            if (Mouse.current.leftButton.wasPressedThisFrame && inDeleteMode)
+            {
+                DeleteBuilding(buildingToDelete);
+            }
         }
-        else
+        // Reset the building marked for deletion if the ray doesn't hit anything
+        else if (buildingToDelete != null)
         {
-            if (targetBuilding != null)
-            {
-                targetBuilding.NotReadyForDelete();
-                targetBuilding = null;
-            }
+            buildingToDelete.NotReadyForDelete();
+            buildingToDelete = null;    
         }
 
     }
+
+    // Places the building at the specified position
 
     private void PlaceBuilding(Vector3 positionToSpawn)
     {
@@ -226,7 +230,9 @@ public class BuilderTool : MonoBehaviour
         trBuilding.position = positionToSpawn;
         lastRotation = trBuilding.rotation;
         buildingToSpawn = null;
-        if(lastAssetData != null)
+
+        // Create a new preview building after placing the current one
+        if (lastAssetData != null)
         {
             CreatePreview(lastAssetData);
         }
@@ -236,24 +242,28 @@ public class BuilderTool : MonoBehaviour
         }
     }
 
+    // Deletes the specified building
     private void DeleteBuilding(Building buildingToDelete)
     {
         Destroy(buildingToDelete.gameObject);
-        targetBuilding = null;
+        this.buildingToDelete = null;
     }
 
+    // Rotates the building clockwise
     private void RotateClockwise()
     {
         trBuilding.Rotate(xAngle: 0, rotationAmount, zAngle: 0);
         lastRotation = trBuilding.rotation;
     }
 
+    // Rotates the building counterclockwise
     private void RotateCounterClockwise()
     {
         trBuilding.Rotate(xAngle: 0, -rotationAmount, zAngle: 0);
         lastRotation = trBuilding.rotation;
     }
-    
+
+    // Draws a debug ray in the editor
     private void OnDrawGizmos()
     {
         if (cam == null)
