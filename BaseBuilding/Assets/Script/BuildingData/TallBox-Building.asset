@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BuildingName: Tallbox
   GridSize: 1
-  Size: {x: 1, y: 2, z: 1}
+  Size: {x: 0.9, y: 1.9, z: 0.8}
   Prefab: {fileID: 3352891674013481590, guid: d69e181c188b6464dbd0d16aa8a1433d, type: 3}
   defautlMaterial: {fileID: 2100000, guid: f794c8451763f354c84ed1f9b0ea15a5, type: 2}

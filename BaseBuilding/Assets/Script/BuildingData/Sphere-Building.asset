@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BuildingName: Sphere
   GridSize: 1
-  Size: {x: 1, y: 1, z: 1}
-  Prefab: {fileID: 5757627596683270086, guid: 8adf00af8fe5635478cce7428b3dfabc, type: 3}
+  Size: {x: 0.9, y: 0.9, z: 0.9}
+  Prefab: {fileID: 928624019220621851, guid: 8adf00af8fe5635478cce7428b3dfabc, type: 3}
   defautlMaterial: {fileID: 2100000, guid: 79f64ed6f5d6d374d91c3a0af4070258, type: 2}
